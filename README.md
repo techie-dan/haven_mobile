@@ -1,56 +1,107 @@
-# Welcome to your Expo app 👋
+# Haven Studio & Living — mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo (SDK 57) storefront for Haven Studio & Living. It is a client of the **same
+Supabase project** as the Next.js website in `../retail store`, so accounts,
+catalogue, and the shopping bag are shared between the two.
 
-## Get started
+## What is shared with the website
 
-1. Install dependencies
+| Concern | Source of truth | Notes |
+| --- | --- | --- |
+| Accounts | Supabase Auth | Google sign-in matches the website; email/password sign-up is verified with a Mailgun code sent by the website API |
+| Catalogue | `public.products` | Same project, same `sort_order` |
+| Bag | `public.cart_items` | Realtime — an item added on the website appears here instantly |
+| Orders | `POST {SITE_URL}/api/orders` | The website's server validates and prices every order |
 
-   ```bash
-   npm install
-   ```
+The app talks to Supabase directly with the public **anon** key (RLS-guarded).
+Checkout is proxied through the website so pricing, discount, tax, and email
+logic live in exactly one place.
 
-2. Start the app
+## Setup
 
-   ```bash
-   npx expo start
-   ```
+### 1. Environment
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+`.env.local` is already populated with the shared public keys. Only copy values
+here that are safe to embed in a shipped bundle:
 
 ```bash
-npm run reset-project
+EXPO_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+EXPO_PUBLIC_TAX_RATE=0.0
+EXPO_PUBLIC_SITE_URL=http://localhost:3000   # the Next.js storefront
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Never put `SUPABASE_SERVICE_ROLE_KEY` or Mailgun keys in this file.
 
-### Other setup steps
+For a **physical device**, set `EXPO_PUBLIC_SITE_URL` to a URL the phone can
+reach (your machine's LAN IP, e.g. `http://192.168.1.20:3000`, or the deployed
+site).
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 2. Database
 
-## Learn more
+Apply the shared-cart migration in the website repo:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+cd "../retail store"
+supabase db push          # or paste supabase/migrations/0003_carts.sql into the SQL editor
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+This creates `public.cart_items`, its RLS policies, and adds it to the
+`supabase_realtime` publication. Without it the app still runs, but a signed-in
+bag falls back to device-local storage and will not sync.
 
-## Join the community
+### 3. Auth redirects
 
-Join our community of developers creating universal apps.
+In **Supabase → Authentication → URL Configuration → Redirect URLs**, allow the
+app's deep link:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Development build: `havenmobile://auth-callback` and `havenmobile://**`
+- Expo Go: the `exp://…` URL printed by `npx expo start` (add `exp://**` for convenience)
+
+Google stays configured in Supabase exactly as it is for the website; the app
+only needs the redirect allowlisted.
+
+Email/password sign-up is proxied through the website so Mailgun can deliver the
+verification code: the app calls `POST {SITE_URL}/api/auth/signup`, shows a code
+screen, then `POST {SITE_URL}/api/auth/verify` before signing in. Make sure
+`EXPO_PUBLIC_SITE_URL` points at a reachable deployment.
+
+### 4. Run
+
+```bash
+npm install
+npx expo start
+```
+
+Adding native modules means the app needs a development build rather than Expo
+Go for full fidelity: `npx expo run:ios` / `npx expo run:android`, or
+`eas build --profile development`.
+
+## Scripts
+
+```bash
+npx expo start     # dev server
+npx expo lint      # eslint (also runs tsc via the editor)
+npx tsc --noEmit   # typecheck
+npx expo-doctor    # dependency/config diagnosis
+```
+
+## How cart sync works
+
+1. The bag is stored in `public.cart_items` keyed by `user_id`, guarded by RLS.
+2. On sign-in the device's guest lines are merged into the account cart.
+3. Every mutation is optimistic locally and written through to Supabase.
+4. Both the website and the app hold a Realtime subscription filtered to
+   `user_id=eq.<id>` and refetch on any change, so a change in one place shows
+   up in the other without a refresh.
+5. On sign-out the local copy is cleared; the basket stays with the account.
+
+## Layout
+
+```
+src/app/            Expo Router routes ((tabs), product/[slug], checkout, login, account)
+src/providers/      auth, cart (Realtime), catalog, saved
+src/lib/            supabase client, catalog, cart, pricing, env, types
+src/ui/             shared primitives (text, button, header, product card, …)
+src/theme/          brand tokens
+```
