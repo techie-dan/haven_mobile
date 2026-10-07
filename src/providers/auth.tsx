@@ -1,15 +1,15 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import type { Session, User } from "@supabase/supabase-js";
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type ReactNode,
+} from "react";
 
 import { SITE_URL, isSupabaseConfigured } from "@/lib/env";
 import { supabase } from "@/lib/supabase";
@@ -60,7 +60,10 @@ interface AuthContextValue {
   loading: boolean;
   configured: boolean;
   signInWithGoogle: () => Promise<{ error?: string }>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
+  signInWithEmail: (
+    email: string,
+    password: string,
+  ) => Promise<{ error?: string }>;
   signUpWithEmail: (
     email: string,
     password: string,
@@ -78,9 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   // Keyed by user id so a previous customer's profile can never leak across
   // accounts, without resetting state inside an effect.
-  const [profileState, setProfileState] = useState<{ userId: string; profile: Profile } | null>(
-    null,
-  );
+  const [profileState, setProfileState] = useState<{
+    userId: string;
+    profile: Profile;
+  } | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
   useEffect(() => {
@@ -112,6 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("[auth] deep-link sign-in failed:", error),
       );
     });
+
+    void Linking.getInitialURL().then((url) => {
+      if (!url || !url.includes("auth-callback")) return;
+      void completeAuthFromUrl(url).catch((error) =>
+        console.error("[auth] cold-start sign-in failed:", error),
+      );
+    });
+
     return () => sub.remove();
   }, []);
 
@@ -137,7 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfileState({ userId, profile: data as Profile });
           return;
         }
-        await new Promise((resolve) => setTimeout(resolve, 350 * (attempt + 1)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, 350 * (attempt + 1)),
+        );
       }
     }
 
@@ -149,35 +163,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) {
-      return { error: "Supabase is not configured. Add your keys to .env.local." };
+      return {
+        error: "Supabase is not configured. Add your keys to .env.local.",
+      };
     }
 
     const redirectTo = Linking.createURL("auth-callback");
+    console.log("[auth] redirectTo:", redirectTo);
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo, skipBrowserRedirect: true },
     });
+
+    console.log("[auth] oauth url:", data?.url);
 
     if (error || !data?.url) {
       return { error: error?.message ?? "Could not start Google sign-in." };
     }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-    if (result.type !== "success" || !result.url) return {};
 
-    try {
-      await completeAuthFromUrl(result.url);
-      return {};
-    } catch (err) {
-      return { error: err instanceof Error ? err.message : "Google sign-in failed." };
+    if (result.type === "success" && result.url) {
+      try {
+        await completeAuthFromUrl(result.url);
+        return {};
+      } catch (err) {
+        return {
+          error: err instanceof Error ? err.message : "Google sign-in failed.",
+        };
+      }
     }
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (session) return {};
+    return { error: "Google sign-in was cancelled or didn't finish." };
   }, []);
 
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    if (!supabase) return { error: "Supabase is not configured." };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? { error: error.message } : {};
-  }, []);
+  const signInWithEmail = useCallback(
+    async (email: string, password: string) => {
+      if (!supabase) return { error: "Supabase is not configured." };
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return error ? { error: error.message } : {};
+    },
+    [],
+  );
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string, fullName: string) => {
@@ -189,23 +224,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, fullName }),
         });
-        const body = (await response.json().catch(() => null)) as
-          | { error?: string; needsVerification?: boolean }
-          | null;
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+          needsVerification?: boolean;
+        } | null;
 
         if (!response.ok) {
           return { error: body?.error ?? "We could not create your account." };
         }
 
         if (body?.needsVerification === false) {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
           if (error) return { error: error.message };
           return { needsVerification: false };
         }
 
         return { needsVerification: true };
       } catch {
-        return { error: "We could not reach the studio. Check your connection." };
+        return {
+          error: "We could not reach the studio. Check your connection.",
+        };
       }
     },
     [],
@@ -218,10 +259,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),
       });
-      const body = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return response.ok ? {} : { error: body?.error ?? "Verification failed." };
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      return response.ok
+        ? {}
+        : { error: body?.error ?? "Verification failed." };
     } catch {
       return { error: "We could not reach the studio. Check your connection." };
     }
@@ -234,10 +277,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const body = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      return response.ok ? {} : { error: body?.error ?? "Could not resend the code." };
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      return response.ok
+        ? {}
+        : { error: body?.error ?? "Could not resend the code." };
     } catch {
       return { error: "We could not reach the studio. Check your connection." };
     }
@@ -252,7 +297,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       session,
-      profile: user && profileState?.userId === user.id ? profileState.profile : null,
+      profile:
+        user && profileState?.userId === user.id ? profileState.profile : null,
       loading,
       configured: isSupabaseConfigured,
       signInWithGoogle,

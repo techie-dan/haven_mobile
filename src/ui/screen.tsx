@@ -6,7 +6,7 @@ import { palette } from "@/theme";
 export function Screen({
   children,
   style,
-  edges = ["top"],
+  edges = ["top", "left", "right"],
 }: {
   children: React.ReactNode;
   style?: ViewStyle;

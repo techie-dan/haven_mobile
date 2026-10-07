@@ -32,6 +32,11 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
+
+# agent tooling (local only)
+.kilo/
+.kilocode/
 
 # typescript
 *.tsbuildinfo
@@ -41,6 +46,3 @@ example
 # generated native folders
 /ios
 /android
-
-# local env files
-.env

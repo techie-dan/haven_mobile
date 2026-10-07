@@ -1,16 +1,14 @@
-import { Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText } from "@/ui/text";
-import { palette, radius, spacing } from "@/theme";
 import { useCart } from "@/providers/cart";
-import { useAuth } from "@/providers/auth";
+import { palette, radius, spacing } from "@/theme";
+import { AppText } from "@/ui/text";
 
 /** Brand lockup used at the top of the tab screens. */
 export function BrandHeader({ title }: { title: string }) {
   const router = useRouter();
-  const { user } = useAuth();
 
   return (
     <View style={styles.brandRow}>
@@ -24,14 +22,16 @@ export function BrandHeader({ title }: { title: string }) {
         <Pressable
           accessibilityLabel="Search the archive"
           onPress={() => router.push("/archive")}
-          hitSlop={8}>
+          hitSlop={8}
+        >
           <Ionicons name="search-outline" size={20} color={palette.ink} />
         </Pressable>
         <Pressable
-          accessibilityLabel="Your account"
-          onPress={() => router.push(user ? "/account" : "/login")}
-          hitSlop={8}>
-          <Ionicons name="person-circle-outline" size={22} color={palette.ink} />
+          accessibilityLabel="Open bag"
+          onPress={() => router.push("/checkout")}
+          hitSlop={8}
+        >
+          <Ionicons name="bag-outline" size={20} color={palette.ink} />
         </Pressable>
       </View>
     </View>
@@ -59,7 +59,8 @@ export function PageHeader({
         accessibilityLabel="Go back"
         onPress={onBack ?? (() => router.back())}
         hitSlop={10}
-        style={styles.iconBtn}>
+        style={styles.iconBtn}
+      >
         <Ionicons name="arrow-back" size={20} color={palette.ink} />
       </Pressable>
 
@@ -74,7 +75,8 @@ export function PageHeader({
               accessibilityLabel="Open bag"
               onPress={() => router.push("/bag")}
               hitSlop={10}
-              style={styles.iconBtn}>
+              style={styles.iconBtn}
+            >
               <Ionicons name="bag-outline" size={20} color={palette.ink} />
               {count > 0 ? (
                 <View style={styles.badge}>

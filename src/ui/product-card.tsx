@@ -1,12 +1,12 @@
-import { Pressable, StyleSheet, View } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppText } from "@/ui/text";
-import { Badge, Stars } from "@/ui/bits";
-import { palette, radius, spacing } from "@/theme";
 import { formatPriceCompact } from "@/lib/pricing";
 import type { Product } from "@/lib/types";
+import { palette, radius, spacing } from "@/theme";
+import { Badge, Stars } from "@/ui/bits";
+import { AppText } from "@/ui/text";
 
 export function ProductCard({
   product,
@@ -24,10 +24,14 @@ export function ProductCard({
   width?: number | `${number}%`;
 }) {
   const onSale =
-    product.compareAtCents !== undefined && product.compareAtCents > product.priceCents;
+    product.compareAtCents !== undefined &&
+    product.compareAtCents > product.priceCents;
 
   return (
-    <Pressable onPress={onPress} style={[styles.card, width ? { width } : null]}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.card, width ? { width } : null]}
+    >
       <View style={styles.imageWrap}>
         <Image
           source={{ uri: product.imageUrl }}
@@ -48,7 +52,8 @@ export function ProductCard({
             accessibilityLabel={saved ? "Remove from saved" : "Save item"}
             onPress={onToggleSaved}
             hitSlop={8}
-            style={styles.heart}>
+            style={styles.heart}
+          >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}
               size={16}
@@ -62,21 +67,21 @@ export function ProductCard({
         <AppText variant="eyebrow" style={styles.material}>
           {product.material || product.artisanNote}
         </AppText>
-        <View style={styles.nameRow}>
-          <AppText variant="title" numberOfLines={2} style={styles.name}>
-            {product.name}
-          </AppText>
-          <Stars rating={product.rating} size={11} />
-        </View>
         {product.tagline ? (
           <AppText variant="bodySoft" numberOfLines={2} style={styles.tagline}>
             {product.tagline}
           </AppText>
         ) : null}
+        <AppText variant="title" numberOfLines={2} style={styles.name}>
+          {product.name}
+        </AppText>
+        <Stars rating={product.rating} size={11} />
 
         <View style={styles.priceRow}>
           <View style={styles.priceStack}>
-            <AppText variant="price">{formatPriceCompact(product.priceCents)}</AppText>
+            <AppText variant="price">
+              {formatPriceCompact(product.priceCents)}
+            </AppText>
             {onSale && product.compareAtCents ? (
               <AppText variant="small" style={styles.compare}>
                 {formatPriceCompact(product.compareAtCents)}
@@ -98,7 +103,8 @@ export function ProductCard({
               accessibilityLabel={`Add ${product.name} to bag`}
               onPress={onAdd}
               hitSlop={6}
-              style={styles.add}>
+              style={styles.add}
+            >
               <Ionicons name="add" size={16} color={palette.white} />
             </Pressable>
           </View>
@@ -132,7 +138,6 @@ const styles = StyleSheet.create({
   meta: { gap: 3 },
   material: { color: palette.muted, fontSize: 9 },
   name: { fontSize: 17, lineHeight: 22 },
-  nameRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
   tagline: { fontSize: 12 },
   priceRow: {
     marginTop: spacing.xs,

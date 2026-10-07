@@ -1,22 +1,22 @@
-import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
+} from "react-native";
 
-import { AppText } from "@/ui/text";
-import { Button } from "@/ui/button";
-import { Divider, Eyebrow } from "@/ui/bits";
-import { Field } from "@/ui/field";
-import { Screen } from "@/ui/screen";
 import { useAuth } from "@/providers/auth";
 import { palette, radius, spacing } from "@/theme";
+import { Divider, Eyebrow } from "@/ui/bits";
+import { Button } from "@/ui/button";
+import { Field } from "@/ui/field";
+import { Screen } from "@/ui/screen";
+import { AppText } from "@/ui/text";
 
 type Mode = "signin" | "signup" | "verify";
 
@@ -62,7 +62,11 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = await signUpWithEmail(email.trim(), password, fullName.trim());
+    const result = await signUpWithEmail(
+      email.trim(),
+      password,
+      fullName.trim(),
+    );
     setBusy(false);
 
     if (result.error) {
@@ -76,7 +80,9 @@ export default function LoginScreen() {
 
     setMode("verify");
     setCode("");
-    setNotice(`We emailed a 6-digit code to ${email.trim()}. Enter it below to finish signing up.`);
+    setNotice(
+      `We emailed a 6-digit code to ${email.trim()}. Enter it below to finish signing up.`,
+    );
   }
 
   async function handleVerify() {
@@ -112,32 +118,38 @@ export default function LoginScreen() {
 
   if (mode === "verify") {
     return (
-      <Screen edges={["top"]}>
+      <Screen edges={["top", "left", "right", "bottom"]}>
+        <Pressable
+          accessibilityLabel="Close"
+          onPress={() => router.back()}
+          hitSlop={10}
+          style={styles.close}
+        >
+          <Ionicons name="close" size={22} color={palette.ink} />
+        </Pressable>
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <Pressable
-              accessibilityLabel="Close"
-              onPress={() => router.back()}
-              hitSlop={10}
-              style={styles.close}>
-              <Ionicons name="close" size={22} color={palette.ink} />
-            </Pressable>
-
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
             <Eyebrow style={styles.brand}>Haven Studio &amp; Living</Eyebrow>
             <AppText variant="displayLarge" style={styles.title}>
               Confirm your email
             </AppText>
             <AppText variant="subtitle" style={styles.copy}>
-              Enter the 6-digit code we sent to {email.trim()} to finish creating
-              your account.
+              Enter the 6-digit code we sent to {email.trim()} to finish
+              creating your account.
             </AppText>
 
             <Field
               label="Verification Code"
               value={code}
-              onChangeText={(next) => setCode(next.replace(/\D/g, "").slice(0, 6))}
+              onChangeText={(next) =>
+                setCode(next.replace(/\D/g, "").slice(0, 6))
+              }
               placeholder="000000"
               keyboardType="number-pad"
               autoCapitalize="none"
@@ -175,7 +187,8 @@ export default function LoginScreen() {
                   setError(null);
                   setNotice(null);
                 }}
-                hitSlop={8}>
+                hitSlop={8}
+              >
                 <AppText variant="bodySoft">Edit details</AppText>
               </Pressable>
             </View>
@@ -186,19 +199,23 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen edges={["top"]}>
+    <Screen edges={["top", "left", "right", "bottom"]}>
+      <Pressable
+        accessibilityLabel="Close"
+        onPress={() => router.back()}
+        hitSlop={10}
+        style={styles.close}
+      >
+        <Ionicons name="close" size={22} color={palette.ink} />
+      </Pressable>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable
-            accessibilityLabel="Close"
-            onPress={() => router.back()}
-            hitSlop={10}
-            style={styles.close}>
-            <Ionicons name="close" size={22} color={palette.ink} />
-          </Pressable>
-
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <Eyebrow style={styles.brand}>Haven Studio &amp; Living</Eyebrow>
           <AppText variant="displayLarge" style={styles.title}>
             {mode === "signin" ? "Welcome Back" : "Create an Account"}
@@ -222,7 +239,12 @@ export default function LoginScreen() {
           </View>
 
           {mode === "signup" ? (
-            <Field label="Full Name" value={fullName} onChangeText={setFullName} placeholder="Amaka Okafor" />
+            <Field
+              label="Full Name"
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Amaka Okafor"
+            />
           ) : null}
           <Field
             label="Email"
@@ -259,7 +281,12 @@ export default function LoginScreen() {
             variant="outline"
             loading={busy}
             onPress={handleEmail}
-            disabled={!configured || !email || password.length < 6 || (mode === "signup" && !fullName.trim())}
+            disabled={
+              !configured ||
+              !email ||
+              password.length < 6 ||
+              (mode === "signup" && !fullName.trim())
+            }
           />
 
           <Pressable
@@ -268,7 +295,8 @@ export default function LoginScreen() {
               setError(null);
               setNotice(null);
             }}
-            style={styles.switch}>
+            style={styles.switch}
+          >
             <AppText variant="bodySoft">
               {mode === "signin" ? "New here? " : "Already have an account? "}
               <AppText variant="body" style={styles.switchLink}>
@@ -284,12 +312,21 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, gap: spacing.md },
-  close: { alignSelf: "flex-end", padding: spacing.sm },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.md,
+  },
+  close: { alignSelf: "flex-end", padding: spacing.md, paddingTop: spacing.lg },
   brand: { color: palette.terracotta },
   title: { marginTop: spacing.xs },
   copy: { marginBottom: spacing.md },
-  orRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginVertical: spacing.sm },
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginVertical: spacing.sm,
+  },
   orLine: { flex: 1 },
   banner: {
     padding: spacing.md,
@@ -301,5 +338,9 @@ const styles = StyleSheet.create({
   bannerError: { color: palette.terracotta },
   switch: { alignSelf: "center", marginTop: spacing.md },
   switchLink: { color: palette.terracotta },
-  verifyRow: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.md },
+  verifyRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+  },
 });
