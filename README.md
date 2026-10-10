@@ -61,10 +61,21 @@ app's deep link:
 Google stays configured in Supabase exactly as it is for the website; the app
 only needs the redirect allowlisted.
 
-Email/password sign-up is proxied through the website so Mailgun can deliver the
-verification code: the app calls `POST {SITE_URL}/api/auth/signup`, shows a code
-screen, then `POST {SITE_URL}/api/auth/verify` before signing in. Make sure
-`EXPO_PUBLIC_SITE_URL` points at a reachable deployment.
+> **The app's flow never sends `http://localhost:3000` or the Vercel URL to
+> Google.** Those two belong to the *website's* own Google configuration
+> (Google Cloud Console → Authorized JavaScript origins, and Supabase Redirect
+> URLs for the web). On mobile, Supabase does the Google handshake with its own
+> configured provider client and redirects back to the app's deep link, so the
+> only mobile-side config is the deep link above. If sign-in fails right after
+> you pick your Google account, check:
+>
+> 1. this app's deep link is in Supabase Redirect URLs (see above), and
+> 2. Google Cloud Console → Authorized redirect URIs contains
+>    `https://sdnoxbcsmmgawqrtpjuf.supabase.co/auth/v1/callback` (the Supabase
+>    callback for this project — required for *both* web and mobile).
+>
+> Email/password sign-up always talks to the website API, so
+> `EXPO_PUBLIC_SITE_URL` must point at a reachable deployment for that flow.
 
 ### 4. Run
 

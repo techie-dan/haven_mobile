@@ -214,7 +214,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 .catch((error) => console.error("[cart] realtime refetch failed:", error));
             },
           )
-          .subscribe();
+          .subscribe((status) => {
+            // Fires on the first subscribe and again after every reconnect
+            // (iOS suspends the socket when the app is backgrounded, and
+            // events broadcast in that window are lost). Re-reading the rows
+            // here means a basket edited on the website is never missed —
+            // it appears the moment the app comes back.
+            if (status !== "SUBSCRIBED") return;
+            void fetchCartRows(userId)
+              .then((next) => {
+                if (!cancelled) applyServerRows(next);
+              })
+              .catch((error) => console.error("[cart] post-subscribe refetch failed:", error));
+          });
       } catch (error) {
         console.error("[cart] could not sync with Supabase; using local cart:", error);
         await restoreLocal();

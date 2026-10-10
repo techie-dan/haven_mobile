@@ -53,6 +53,18 @@ export async function completeAuthFromUrl(url: string): Promise<void> {
   }
 }
 
+/**
+ * Pulls an OAuth error out of the URL Supabase redirects to when it rejects a
+ * flow — typically the app's deep link is missing from Authentication → URL
+ * Configuration → Redirect URLs, and Supabase serves an `error_description` on
+ * its own domain instead of calling back into the app.
+ */
+function oauthErrorFromUrl(url: string): string | null {
+  const beforeHash = url.split("#")[0];
+  const params = new URLSearchParams(beforeHash.split("?")[1] ?? "");
+  return params.get("error_description") ?? params.get("error");
+}
+
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
@@ -168,7 +180,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const redirectTo = Linking.createURL("auth-callback");
+    // In standalone and development builds, havenmobile://auth-callback is the native scheme.
+    // In Expo Go, Linking.createURL('auth-callback') resolves to exp://...
+    // Passing { scheme: 'havenmobile' } ensures custom scheme consistency where supported.
+    const redirectTo = Linking.createURL("auth-callback", { scheme: "havenmobile" });
+    const scheme = redirectTo.split("://")[0];
     console.log("[auth] redirectTo:", redirectTo);
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -182,8 +198,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    console.log("[auth] browser session result:", JSON.stringify(result));
 
     if (result.type === "success" && result.url) {
+      const oauthError = oauthErrorFromUrl(result.url);
+      if (oauthError) {
+        return {
+          error:
+            `${oauthError}. The app's redirect link is almost certainly not ` +
+            `allowlisted — add "${redirectTo}" (or "${scheme}://**") to ` +
+            "Supabase → Authentication → URL Configuration → Redirect URLs.",
+        };
+      }
       try {
         await completeAuthFromUrl(result.url);
         return {};
@@ -199,7 +225,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { session },
     } = await supabase.auth.getSession();
     if (session) return {};
-    return { error: "Google sign-in was cancelled or didn't finish." };
+
+    return {
+      error:
+        `Google sign-in didn't return to the app. On a device build this means ` +
+        `${redirectTo} is missing from Supabase → Authentication → URL ` +
+        `Configuration → Redirect URLs — add it, or "${scheme}://**".`,
+    };
   }, []);
 
   const signInWithEmail = useCallback(

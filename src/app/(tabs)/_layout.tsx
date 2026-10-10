@@ -47,7 +47,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="archive"
         options={{
-          title: "Orders",
+          title: "Archive",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list-outline" size={size} color={color} />
           ),
@@ -55,6 +55,15 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="bag"
+        options={{
+          title: "Bag",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="bag-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="account"
         options={{
           title: "Account",
           tabBarIcon: ({ color, size }) => (
